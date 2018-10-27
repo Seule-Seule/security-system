@@ -1,0 +1,129 @@
+C51 COMPILER V9.54   C51                                                                   05/04/2018 10:32:29 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE C51
+OBJECT MODULE PLACED IN .\Objects\c51.obj
+COMPILER INVOKED BY: C:\software\mdk5\C51\BIN\C51.EXE user\c51.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\HARDWARE\1602;.\HARDW
+                    -ARE\DHT11;.\HARDWARE\DS1302;.\HARDWARE\TIMER) DEBUG OBJECTEXTEND PRINT(.\Listings\c51.lst) OBJECT(.\Objects\c51.obj)
+
+line level    source
+
+   1          #include<reg52.h>    //包含单片机寄存器的头文件
+   2          #include<intrins.h> //包含_nop_()函数定义的头文件
+   3          #include "1602.h"
+   4          #include "dht11.h"
+   5          #include "ds1302.h"
+   6          #include "timer.h"
+   7          #define uchar unsigned char
+   8          #define uint  unsigned int
+   9          #define delayNOP(); {_nop_();_nop_();_nop_();_nop_();};
+  10          sbit BEEP=P0^0;
+  11          sbit K1=P1^1;
+  12          sbit K2=P1^0;
+  13          sbit K3=P1^2;
+  14          sbit K4=P1^3;
+  15          sbit K5=P1^4;
+  16          char work_mode=0;
+  17          char SET_TIME_MODE=1,SET_TEMP_MODE=1,SET_RH_MODE=1;
+  18          xdata char set_H=10,set_M=10,set_S=10;
+  19          xdata int SET_TEMP_H=400,SET_TEMP_L=100;
+  20          xdata int SET_RH_H=60,SET_RH_L=10;
+  21          
+  22          void SET_TIME(char SET_TIME_mode)
+  23          {
+  24   1              switch(SET_TIME_mode)
+  25   1              {
+  26   2                      case 1:
+  27   2                      PRINT_SET_TIME_hour();  
+  28   2                      break;//时
+  29   2                      case 2:
+  30   2                      PRINT_SET_TIME_minute();        
+  31   2                      break;//分
+  32   2                      case 3:
+  33   2                      PRINT_SET_TIME_second();        
+  34   2                      break;//秒
+  35   2              }
+  36   1      }
+  37          void SET_TEMP(char SET_TEMP_mode)
+  38          {
+  39   1              switch(SET_TEMP_mode)
+  40   1              {
+  41   2                      case 1:
+  42   2                      PRINT_SET_TEMP_H();//设置温度高限       
+*** WARNING C206 IN LINE 42 OF user\c51.c: 'PRINT_SET_TEMP_H': missing function-prototype
+  43   2                      break;//时
+  44   2                      case 2:
+  45   2                      PRINT_SET_TEMP_L();//设置温度低限
+*** WARNING C206 IN LINE 45 OF user\c51.c: 'PRINT_SET_TEMP_L': missing function-prototype
+  46   2                      break;//分
+  47   2              }
+  48   1      }
+  49          
+  50          void SET_RH(char SET_RH_mode)
+  51          {
+  52   1              switch(SET_RH_mode)
+C51 COMPILER V9.54   C51                                                                   05/04/2018 10:32:29 PAGE 2   
+
+  53   1              {
+  54   2                      case 1:
+  55   2                      PRINT_SET_RH_H();//设置温度高限 
+*** WARNING C206 IN LINE 55 OF user\c51.c: 'PRINT_SET_RH_H': missing function-prototype
+  56   2                      break;//时
+  57   2                      case 2:
+  58   2                      PRINT_SET_RH_L();//设置温度低限
+*** WARNING C206 IN LINE 58 OF user\c51.c: 'PRINT_SET_RH_L': missing function-prototype
+  59   2                      break;//分
+  60   2              }
+  61   1      }
+  62          
+  63          
+  64          
+  65          void main()
+  66          {
+  67   1      
+  68   1              char code sys_Data[2][11]={"SYSTEM Init","Please Wait"};
+  69   1              char xdata i;
+  70   1              BEEP=1;
+  71   1              LCD_1602_Init();
+  72   1              Initial_DS1302();
+  73   1                      
+  74   1              lcd_pos(2);
+  75   1              for(i=0;i<11;i++)
+  76   1              lcd_wdat(sys_Data[0][i]);
+  77   1              lcd_pos(42);
+  78   1              for(i=0;i<11;i++)
+  79   1              lcd_wdat(sys_Data[1][i]);
+  80   1              delay(2500);
+  81   1              TIMER_Init();
+  82   1      //      DS1302_SetTime(DS1302_HOUR,10); //设置的时间是10：54：30
+  83   1      //      DS1302_SetTime(DS1302_MINUTE,54);
+  84   1      //      DS1302_SetTime(DS1302_SECOND,30);   
+  85   1      
+  86   1      while(1)
+  87   1      {
+  88   2              switch(work_mode)
+  89   2              {
+  90   3                      case 0:break;//正常输出
+  91   3                      case 1:SET_TIME(SET_TIME_MODE);break;//修改时间
+  92   3                      case 2:SET_TEMP(SET_TEMP_MODE);break;//修改温度
+  93   3                      case 3:SET_RH(SET_RH_MODE);break;//修改湿度
+  94   3                      default:break;
+  95   3              }
+  96   2      
+  97   2      }
+  98   1      
+  99   1      } 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    758    ----
+   CONSTANT SIZE    =     22    ----
+   XDATA SIZE       =     11       1
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     10      25
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  4 WARNING(S),  0 ERROR(S)

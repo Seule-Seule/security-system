@@ -1,0 +1,114 @@
+C51 COMPILER V9.55   MAIN                                                                  04/14/2018 23:26:31 PAGE 1   
+
+
+C51 COMPILER V9.55, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: F:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Test-LED-BELL-TranLed) DEBUG O
+                    -BJECTEXTEND PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include "STC15.h"
+   2          #include "stdio.h"
+   3          #include "Delay.h"
+   4          #include "uart.h"
+   5          #include "dht11.h"
+   6          unsigned char temp[2],humi[2];
+   7          unsigned char flag;
+   8          unsigned char code Num[16]={0x3F,
+   9          0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,
+  10          0x7F,0x6F,0x77,0x7C,0x39,0x5E,0x79,0x71};
+  11          int m,n,p,q;
+  12          long int i;
+  13          
+  14          void main(void)
+  15          {
+  16   1        P0M1 = 0; P0M0 = 0; //设置为准双向口
+  17   1        P1M1 = 0; P1M0 = 1; //设置为准双向口
+  18   1        P2M1 = 0; P2M0 = 1; //设置为准双向口
+  19   1        P3M1 = 0; P3M0 = 0; //设置为准双向口
+  20   1        P4M1 = 0; P4M0 = 0; //设置为准双向口
+  21   1        P5M1 = 0; P5M0 = 0; //设置为准双向口
+  22   1        P6M1 = 0; P6M0 = 0; //设置为准双向口
+  23   1        P7M1 = 0; P7M0 = 0; //设置为准双向口
+  24   1        
+  25   1        while(1)
+  26   1        {
+  27   2          flag=DHT11_Read_Data(temp,humi);
+  28   2          if(flag==0)       //读取成功
+  29   2          {
+  30   3            m=(int)temp[0]/10;
+  31   3            n=(int)temp[0]%10;
+  32   3            p=(int)temp[1]/10;
+  33   3            i=100;
+  34   3            
+  35   3            if(temp[0]>50||humi[0]>90)
+  36   3            {
+  37   4              P24=1;
+  38   4            }
+  39   3            else P24=0;
+  40   3            
+  41   3            while(i--)
+  42   3            {
+  43   4              P23=1;
+  44   4              P1=~Num[12];
+  45   4              delay_ms(10);
+  46   4              P23=0;
+  47   4              P20=1;//P20十位供电
+  48   4              P1=~Num[m];//P1显示
+  49   4              Delay1ms();
+  50   4              P20=0;
+  51   4              P21=1;//P21个位供电
+  52   4              P1=~(Num[n]+0x80);
+  53   4              delay_ms(10);
+  54   4              P21=0;
+C51 COMPILER V9.55   MAIN                                                                  04/14/2018 23:26:31 PAGE 2   
+
+  55   4              P22=1;//P22十分位供电
+  56   4              P1=~Num[p];
+  57   4              delay_ms(10);
+  58   4              P22=0;
+  59   4            }
+  60   3            
+  61   3            m=(int)humi[0]/10;
+  62   3            n=(int)humi[0]%10;
+  63   3            p=(int)humi[1]/10;
+  64   3            q=(int)humi[1]%10;
+  65   3            i=100;
+  66   3            while(i--)
+  67   3            {
+  68   4              P20=1;//P20十位供电
+  69   4              P1=~Num[m];//P1显示
+  70   4              Delay1ms();
+  71   4              P20=0;
+  72   4              P21=1;//P21个位供电
+  73   4              P1=~(Num[n]+0x80);
+  74   4              delay_ms(10);
+  75   4              P21=0;
+  76   4              P22=1;//P22十分位供电
+  77   4              P1=~Num[p];
+  78   4              delay_ms(10);
+  79   4              P22=0;
+  80   4              P23=1;//P23百分位供电
+  81   4              P1=~Num[q];
+  82   4              delay_ms(10);
+  83   4              P23=0;
+  84   4            }
+  85   3          }
+  86   2        }
+  87   1      }
+  88          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    457    ----
+   CONSTANT SIZE    =     16    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     17    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

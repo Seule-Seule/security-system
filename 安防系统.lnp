@@ -1,0 +1,7 @@
+"STARTUP.obj",
+"main.obj",
+"lcd.obj",
+"dht11.obj",
+"delay.obj" 
+TO "∞≤∑¿œµÕ≥" 
+RAMSIZE(256) 

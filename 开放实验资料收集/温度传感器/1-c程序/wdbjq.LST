@@ -1,0 +1,335 @@
+C51 COMPILER V6.12  WDBJQ                                                                  06/02/2017 14:17:37 PAGE 1   
+
+
+C51 COMPILER V6.12, COMPILATION OF MODULE WDBJQ
+OBJECT MODULE PLACED IN wdbjq.OBJ
+COMPILER INVOKED BY: D:\Keil\C51\BIN\C51.EXE wdbjq.c DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          #include <AT89X52.h> 
+   2          #define uint unsigned int
+   3          #define uchar unsigned char   	//宏定义
+   4          #define SET  P3_1    			//定义调整键
+   5          #define DEC  P3_2    			//定义减少键
+   6          #define ADD  P3_3    			//定义增加键
+   7          #define BEEP P3_6    			//定义蜂鸣器
+   8          #define ALAM P1_2				//定义灯光报警
+   9          #define DQ   P3_7     			//定义DS18B20总线I/O	
+  10          bit shanshuo_st;    			//闪烁间隔标志
+  11          bit beep_st;     				//蜂鸣器间隔标志
+  12          sbit DIAN = P0^5;        		//小数点
+  13          uchar x=0;      				//计数器
+  14          signed char m;     				//温度值全局变量
+  15          uchar n;      					//温度值全局变量
+  16          uchar set_st=0;     			//状态标志
+  17          signed char shangxian=38;  		//上限报警温度，默认值为38
+  18          signed char xiaxian=5;   		//下限报警温度，默认值为38
+  19          //uchar code  LEDData[]={0xC0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90,0xff};
+  20          uchar code  LEDData[]={0x5F,0x44,0x9D,0xD5,0xC6,0xD3,0xDB,0x47,0xDF,0xD7,0xCF,0xDA,0x9B,0xDC,0x9B,0x8B};
+  21          
+  22          //============================================================================================
+  23          //====================================DS18B20=================================================
+  24          //============================================================================================
+  25          /*****延时子程序*****/
+  26          void Delay_DS18B20(int num)
+  27          {
+  28   1        while(num--) ;
+  29   1      }
+  30          /*****初始化DS18B20*****/
+  31          void Init_DS18B20(void)
+  32          {
+  33   1        unsigned char x=0;
+  34   1        DQ = 1;         //DQ复位
+  35   1        Delay_DS18B20(8);    //稍做延时
+  36   1        DQ = 0;         //单片机将DQ拉低
+  37   1        Delay_DS18B20(80);   //精确延时，大于480us
+  38   1        DQ = 1;         //拉高总线
+  39   1        Delay_DS18B20(14);
+  40   1        x = DQ;           //稍做延时后，如果x=0则初始化成功，x=1则初始化失败
+  41   1        Delay_DS18B20(20);
+  42   1      }
+  43          /*****读一个字节*****/
+  44          unsigned char ReadOneChar(void)
+  45          {
+  46   1        unsigned char i=0;
+  47   1        unsigned char dat = 0;
+  48   1        for (i=8;i>0;i--)
+  49   1        {
+  50   2          DQ = 0;     // 给脉冲信号
+  51   2          dat>>=1;
+  52   2          DQ = 1;     // 给脉冲信号
+  53   2          if(DQ)
+  54   2          dat|=0x80;
+  55   2          Delay_DS18B20(4);
+C51 COMPILER V6.12  WDBJQ                                                                  06/02/2017 14:17:37 PAGE 2   
+
+  56   2        }
+  57   1        return(dat);
+  58   1      }
+  59          /*****写一个字节*****/
+  60          void WriteOneChar(unsigned char dat)
+  61          {
+  62   1        unsigned char i=0;
+  63   1        for (i=8; i>0; i--)
+  64   1        {
+  65   2          DQ = 0;
+  66   2          DQ = dat&0x01;
+  67   2          Delay_DS18B20(5);
+  68   2          DQ = 1;
+  69   2          dat>>=1;
+  70   2        }
+  71   1      }
+  72          /*****读取温度*****/
+  73          unsigned int ReadTemperature(void)
+  74          {
+  75   1        unsigned char a=0;
+  76   1        unsigned char b=0;
+  77   1        unsigned int t=0;
+  78   1        float tt=0;
+  79   1        Init_DS18B20();
+  80   1        WriteOneChar(0xCC);  //跳过读序号列号的操作
+  81   1        WriteOneChar(0x44);  //启动温度转换
+  82   1        Init_DS18B20();
+  83   1        WriteOneChar(0xCC);  //跳过读序号列号的操作
+  84   1        WriteOneChar(0xBE);  //读取温度寄存器
+  85   1        a=ReadOneChar();     //读低8位
+  86   1        b=ReadOneChar();    //读高8位
+  87   1        t=b;				   //高8位转移到t
+  88   1        t<<=8;			   //t数据左移8位
+  89   1        t=t|a;			   //将t和a按位或，得到一个16位的数
+  90   1        tt=t*0.0625;		   //将t乘以0.0625得到实际温度值（温度传感器设置12位精度，最小分辨率是0.0625）
+  91   1        t= tt*10+0.5;     //放大10倍（将小数点后一位显示出来）输出并四舍五入
+  92   1        return(t);		   //返回温度值
+  93   1      }
+  94          //=====================================================================================
+  95          //=====================================================================================
+  96          //=====================================================================================
+  97          
+  98          
+  99          /*****延时子程序*****/
+ 100          void Delay(uint num)
+ 101          {
+ 102   1       while( --num );
+ 103   1      }
+ 104          /*****初始化定时器0*****/
+ 105          void InitTimer(void)
+ 106          {
+ 107   1      	TMOD=0x1;
+ 108   1      	TH0=0x3c;
+ 109   1      	TL0=0xb0;     //50ms（晶振12M）
+ 110   1      }
+ 111          
+ 112          /*****读取温度*****/
+ 113          void check_wendu(void)
+ 114          {
+ 115   1      	uint a,b,c;
+ 116   1      	c=ReadTemperature();  			//获取温度值
+ 117   1      	a=c/100;     						//计算得到十位数字
+C51 COMPILER V6.12  WDBJQ                                                                  06/02/2017 14:17:37 PAGE 3   
+
+ 118   1      	b=c/10-a*10;    					//计算得到个位数字
+ 119   1      	m=c/10;      						//计算得到整数位
+ 120   1      	n=c-a*100-b*10;    				//计算得到小数位
+ 121   1      	if(m<0){m=0;n=0;}   				//设置温度显示上限
+ 122   1      	if(m>99){m=99;n=9;}   				//设置温度显示上限    
+ 123   1      }
+ 124          /*****显示开机初始化等待画面*****/
+ 125          void Disp_init(void)    
+ 126          {
+ 127   1      	P0 = ~0x80;      //显示----
+ 128   1      	P2 = 0x7F;
+ 129   1      	Delay(200);
+ 130   1      	P2 = 0xDF;
+ 131   1      	Delay(200);   
+ 132   1      	P2 = 0xF7;
+ 133   1      	Delay(200);
+ 134   1      	P2 = 0xFD;
+ 135   1      	Delay(200);
+ 136   1      	P2 = 0xFF;         //关闭显示
+ 137   1      }
+ 138          /*****显示温度子程序*****/
+ 139          void Disp_Temperature(void)     //显示温度
+ 140          {
+ 141   1      	P0 = ~0x98;      //显示C
+ 142   1      	P2 = 0x7F;
+ 143   1      	Delay(100);
+ 144   1      	P2=0xff;
+ 145   1      	P0=~LEDData[n];    //显示个位
+ 146   1      	P2 = 0xDF;
+ 147   1      	Delay(100);
+ 148   1      	P2=0xff;
+ 149   1      	P0 =~LEDData[m%10];    //显示十位
+ 150   1      	DIAN = 0;         //显示小数点
+ 151   1      	P2 = 0xF7;
+ 152   1      	Delay(100);
+ 153   1      	P2=0xff;
+ 154   1      	P0 =~LEDData[m/10];    //显示百位
+ 155   1      	P2 = 0xFD;
+ 156   1      	Delay(100);
+ 157   1      	P2 = 0xff;         //关闭显示
+ 158   1      }
+ 159          /*****显示报警温度子程序*****/
+ 160          void Disp_alarm(uchar baojing)
+ 161          {
+ 162   1      	P0 =~0x98;      //显示C
+ 163   1      	P2 = 0x7F;
+ 164   1      	Delay(100);
+ 165   1      	P2=0xff;
+ 166   1      	P0 =~LEDData[baojing%10]; //显示十位
+ 167   1      	P2 = 0xDF;
+ 168   1      	Delay(100);
+ 169   1      	P2=0xff;
+ 170   1      	P0 =~LEDData[baojing/10]; //显示百位
+ 171   1      	P2 = 0xF7;
+ 172   1      	Delay(100);
+ 173   1      	P2=0xff;
+ 174   1      	if(set_st==1)P0 =~0xCE;
+ 175   1      	else if(set_st==2)P0 =~0x1A; //上限H、下限L标示
+ 176   1      	P2 = 0xFD;
+ 177   1      	Delay(100);
+ 178   1      	P2 = 0xff;         //关闭显示
+ 179   1      }
+C51 COMPILER V6.12  WDBJQ                                                                  06/02/2017 14:17:37 PAGE 4   
+
+ 180          /*****报警子程序*****/
+ 181          void Alarm()
+ 182          {
+ 183   1      	if(x>=10){beep_st=~beep_st;x=0;}
+ 184   1      	if((m>=shangxian&&beep_st==1)||(m<xiaxian&&beep_st==1))
+ 185   1      	{
+ 186   2      		BEEP=0;
+ 187   2      		ALAM=0;
+ 188   2      	}
+ 189   1      	else
+ 190   1      	{
+ 191   2      		BEEP=1;
+ 192   2      		ALAM=1;
+ 193   2      	}
+ 194   1      }
+ 195          /*****主函数*****/
+ 196          void main(void)
+ 197          {
+ 198   1          uint z;
+ 199   1       InitTimer();    //初始化定时器
+ 200   1       EA=1;      //全局中断开关
+ 201   1       TR0=1;
+ 202   1       ET0=1;      //开启定时器0
+ 203   1       IT0=1;        
+ 204   1       IT1=1;
+ 205   1       check_wendu();
+ 206   1       check_wendu();
+ 207   1       for(z=0;z<300;z++)
+ 208   1       {
+ 209   2        Disp_init();        
+ 210   2        }
+ 211   1       while(1)
+ 212   1        {
+ 213   2        if(SET==0)
+ 214   2        {
+ 215   3         Delay(2000);
+ 216   3         do{}while(SET==0);
+ 217   3         set_st++;x=0;shanshuo_st=1;
+ 218   3         if(set_st>2)set_st=0;
+ 219   3        }
+ 220   2        if(set_st==0)
+ 221   2        {
+ 222   3         EX0=0;    //关闭外部中断0
+ 223   3         EX1=0;    //关闭外部中断1
+ 224   3          check_wendu();
+ 225   3            Disp_Temperature();
+ 226   3         Alarm();   //报警检测
+ 227   3        }
+ 228   2        else if(set_st==1)
+ 229   2        {
+ 230   3         BEEP=1;    //关闭蜂鸣器
+ 231   3         ALAM=1;
+ 232   3         EX0=1;    //开启外部中断0
+ 233   3         EX1=1;    //开启外部中断1
+ 234   3         if(x>=10){shanshuo_st=~shanshuo_st;x=0;}
+ 235   3         if(shanshuo_st) {Disp_alarm(shangxian);}
+ 236   3        }
+ 237   2        else if(set_st==2)
+ 238   2        {
+ 239   3         BEEP=1;    //关闭蜂鸣器
+ 240   3         ALAM=1;
+ 241   3         EX0=1;    //开启外部中断0
+C51 COMPILER V6.12  WDBJQ                                                                  06/02/2017 14:17:37 PAGE 5   
+
+ 242   3         EX1=1;    //开启外部中断1
+ 243   3         if(x>=10){shanshuo_st=~shanshuo_st;x=0;}
+ 244   3         if(shanshuo_st) {Disp_alarm(xiaxian);}
+ 245   3        }
+ 246   2          }
+ 247   1      }
+ 248          
+ 249          /*****定时器0中断服务程序*****/
+ 250          void timer0(void) interrupt 1
+ 251          {
+ 252   1       TH0=0x3c;
+ 253   1       TL0=0xb0;
+ 254   1       x++;
+ 255   1      }
+ 256          /*****外部中断0服务程序*****/
+ 257          void int0(void) interrupt 0
+ 258          {
+ 259   1       
+ 260   1       EX0=0;      //关外部中断0
+ 261   1       if(DEC==0&&set_st==1)
+ 262   1       {
+ 263   2        	do{
+ 264   3      		Disp_alarm(shangxian);
+ 265   3      	}
+ 266   2       	while(DEC==0);
+ 267   2        	shangxian--;
+ 268   2        	if(shangxian<xiaxian)shangxian=xiaxian;
+ 269   2       }
+ 270   1       else if(DEC==0&&set_st==2)
+ 271   1       {
+ 272   2        	do{
+ 273   3      		Disp_alarm(xiaxian);
+ 274   3      	}
+ 275   2       	while(DEC==0);
+ 276   2       	xiaxian--;
+ 277   2        	if(xiaxian<0)xiaxian=0;
+ 278   2       }
+ 279   1      }
+ 280          /*****外部中断1服务程序*****/
+ 281          void int1(void) interrupt 2
+ 282          {
+ 283   1       EX1=0;      //关外部中断1
+ 284   1       if(ADD==0&&set_st==1)
+ 285   1       {
+ 286   2       	do{
+ 287   3      		Disp_alarm(shangxian);
+ 288   3      	}
+ 289   2       	while(ADD==0);
+ 290   2        	shangxian++;
+ 291   2        	if(shangxian>99)shangxian=99;
+ 292   2       }
+ 293   1       else if(ADD==0&&set_st==2)
+ 294   1       {
+ 295   2        	do{
+ 296   3      		Disp_alarm(xiaxian);
+ 297   3      	}
+ 298   2       	while(ADD==0);
+ 299   2        	xiaxian++;
+ 300   2        	if(xiaxian>shangxian)xiaxian=shangxian;
+ 301   2       }  
+ 302   1      }
+
+C51 COMPILER V6.12  WDBJQ                                                                  06/02/2017 14:17:37 PAGE 6   
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1043    ----
+   CONSTANT SIZE    =     16    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      6      10
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

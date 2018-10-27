@@ -1,0 +1,150 @@
+C51 COMPILER V9.55   DHT11                                                                 04/14/2018 23:26:32 PAGE 1   
+
+
+C51 COMPILER V9.55, COMPILATION OF MODULE DHT11
+OBJECT MODULE PLACED IN .\Objects\dht11.obj
+COMPILER INVOKED BY: F:\Keil_v5\C51\BIN\C51.EXE dht11.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Test-LED-BELL-TranLed) DEBUG 
+                    -OBJECTEXTEND PRINT(.\Listings\dht11.lst) TABS(2) OBJECT(.\Objects\dht11.obj)
+
+line level    source
+
+   1          #include "dht11.h"
+   2          #include "delay.h"
+   3          /*********************************************************************************************
+   4          函数名：DHT11初始化函数
+   5          调  用：DHT11_Rst(）
+   6          参  数：无
+   7          返回值：无
+   8          **********************************************************************************************/
+   9          void DHT11_Rst(void)     
+  10          {                 
+  11   1        DHTDAT=0;          //主机发起始信号
+  12   1        delay_ms(20);     //主机拉低总线至少18ms
+  13   1        DHTDAT=1;         //主机拉高总线20~40us
+  14   1        delay_us(30);     //主机拉高20~40us
+  15   1      }
+  16          /*********************************************************************************************
+  17          函数名：DHT11响应检验函数
+  18          调  用：DHT11_Check(）
+  19          参  数：无
+  20          返回值：1未检测到DHT11的存在；0检测到DHT11的存在
+  21          **********************************************************************************************/
+  22          unsigned char DHT11_Check(void)      
+  23          {   
+  24   1        unsigned char retry=0; 
+  25   1        while (DHTDAT&&retry<100)//DHT11会拉低40~80us
+  26   1        {
+  27   2          retry++;
+  28   2          Delay1us();
+  29   2        } 
+  30   1        if(retry>=80)return 1;
+  31   1        else retry=0;
+  32   1        while (!DHTDAT&&retry<100)  //DHT11拉低后会再次拉高40~80us
+  33   1        {
+  34   2          retry++;
+  35   2          Delay1us();
+  36   2        }
+  37   1        if(retry>=80)return 1;      
+  38   1        return 0;
+  39   1      }
+  40          
+  41          /*********************************************************************************************
+  42          函数名：DHT11位读取函数
+  43          调  用：DHT11_Read_Bit(）；
+  44          参  数：无
+  45          返回值：1，0
+  46          **********************************************************************************************/
+  47          unsigned char DHT11_Read_Bit(void)       
+  48          {
+  49   1        unsigned char retry=0;
+  50   1        while(DHTDAT&&retry<100)    //等待变为低电平
+  51   1        {
+  52   2          retry++;
+  53   2          Delay1us();
+  54   2        }
+C51 COMPILER V9.55   DHT11                                                                 04/14/2018 23:26:32 PAGE 2   
+
+  55   1        retry=0;
+  56   1        while(!DHTDAT&&retry<100)   //等待变高电平
+  57   1        {
+  58   2          retry++;
+  59   2          Delay1us();
+  60   2        }
+  61   1        Delay40us();                //等待40us(必须精确)
+  62   1        if(DHTDAT)return 1;
+  63   1        else return 0;       
+  64   1      }
+  65          /*********************************************************************************************
+  66          函数名：DHT11字节（8位）读取函数
+  67          调  用：DHT11_Read_Bit(）；
+  68          参  数：无
+  69          返回值：1，0
+  70          **********************************************************************************************/
+  71          unsigned char DHT11_Read_Byte(void)    
+  72          {        
+  73   1          unsigned char i,dat;
+  74   1          dat=0;
+  75   1        for (i=0;i<8;i++) 
+  76   1        {
+  77   2            dat<<=1; 
+  78   2            dat|=DHT11_Read_Bit();
+  79   2          }               
+  80   1          return dat;
+  81   1      }
+  82          /*********************************************************************************************
+  83          函数名：DHT11数据读取函数
+  84          调  用：DHT11_Read_Data；
+  85          参  数：temp:温度值(范围:0~50°)
+  86                  humi:湿度值(范围:20%~90%)
+  87          返回值：1，2读取失败，0数据正常
+  88          **********************************************************************************************/
+  89          unsigned char DHT11_Read_Data(unsigned char *temp,unsigned char *humi)    
+  90          {        
+  91   1        unsigned char buf[5];
+  92   1        unsigned char i;
+  93   1        DHT11_Rst();
+  94   1        if(DHT11_Check()==0)
+  95   1        {
+  96   2          for(i=0;i<5;i++)          //读取40位数据
+  97   2          {
+  98   3            buf[i]=DHT11_Read_Byte();
+  99   3          }
+ 100   2          if((buf[0]+buf[1]+buf[2]+buf[3])==buf[4])  //检查数据
+ 101   2          {
+ 102   3            *humi=buf[0];
+ 103   3            *(humi+1)=buf[1];
+ 104   3            *temp=buf[2];
+ 105   3            *(temp+1)=buf[3];
+ 106   3          }
+ 107   2          else return 2;
+ 108   2        }else return 1;
+ 109   1        return 0;     
+ 110   1      }
+ 111          /*********************************************************************************************
+ 112          函数名：初始化DHT11的IO口 DATA 同时检测DHT11的存在
+ 113          调  用：DHT11_Init；
+ 114          参  数：
+ 115          返回值：1不存在，0存在
+ 116          **********************************************************************************************/  
+C51 COMPILER V9.55   DHT11                                                                 04/14/2018 23:26:32 PAGE 3   
+
+ 117          unsigned char DHT11_Init(void)
+ 118          {  
+ 119   1         DHTDAT=1;
+ 120   1         DHT11_Rst();
+ 121   1         return DHT11_Check();
+ 122   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    300    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      16
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

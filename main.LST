@@ -1,0 +1,119 @@
+C51 COMPILER V9.01   MAIN                                                                  10/24/2018 11:33:11 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Program Files (x86)\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          //////////////////////////////////////////////
+   2          //      基于stc89c52的安防系统
+   3          //      自控1702班--泛玉成
+   4          //       2018-10-17
+   5          /////////////////////////////////////////////
+   6          //              LCD1602接线：
+   7          //          P0--数据总线
+   8          //          RS--P2^6
+   9          //          RW--P2^5
+  10          //          EN--P2^7    
+  11          //              DHT11接线：
+  12          //                      DHT11--P2^0
+  13          //              蜂鸣器模块：    
+  14          //                      Beep--P2^1 
+  15          //      火焰传感器：
+  16          //                      flame--P2^2
+  17          //      烟雾传感器：
+  18          //          mq-2--P2^3
+  19          //      人体红外传感器：
+  20          //          hr-sr--P2^4
+  21          ///////////////////////////////////////////////
+  22          
+  23          //文件包含
+  24          
+  25          #include "lcd.h"
+  26          #include "reg51.h"
+  27          #include "dht11.h"
+  28          #include "delay.h"
+  29          #include "flame.h"
+  30          #include "MQ-2.h"
+  31          #include "beep.h"
+  32          #include "hr-sr.h"
+  33          
+  34          
+  35          uchar code  tem[3] = "T:"  ;
+  36          uchar code  hum[3] = "H:" ;
+  37          uchar code  fire[] = "FIRE!";
+  38          uchar code  smoky[] = "SMOKY!";
+  39          uchar code  stranger[] = "STRANGER!";
+  40          
+  41          
+  42          uchar dht11_chec = 1;  //dht11检测位
+  43          uchar dht11_chec2 = 1;  //dht11报警位
+  44          uchar flame_check = 1;  //火焰传感器检测位
+  45          uchar mq_check = 1;             //烟雾报警器检测位
+  46          uchar hr_sr_check = 1;  //人体红外检测位
+  47          
+  48          
+  49          void main()
+  50          {
+  51   1              InitLcd1602();              //1602初始化
+  52   1              DHT11_Init();              //DHT11初始化
+  53   1              delay_ms(1100);                    //上电暂停1秒，等待DHT测试完成
+  54   1              while(1)
+  55   1              {
+C51 COMPILER V9.01   MAIN                                                                  10/24/2018 11:33:11 PAGE 2   
+
+  56   2                      LcdShowStr(0,0,tem);
+  57   2                      LcdShowStr(9,0,hum);
+  58   2                      dht11_chec = DHT11_Read_Data();
+  59   2                      if(dht11_chec == 0)
+  60   2                      {       
+  61   3                              uchar i;
+  62   3                              dht11_chec2 = lcdout();
+  63   3                              if(dht11_chec2 == 0)
+  64   3                              for(i = 0;i<4;i++)      bep();  
+  65   3                      }
+  66   2                      flame_check = flame_read();     
+  67   2                      if(flame_check == 0)
+  68   2                      {
+  69   3                              uchar i;
+  70   3                              LcdShowStr(2,1,fire);
+  71   3                              for(i = 0;i < 3;i++)
+  72   3                                      bep();
+  73   3                              Lcd1602_Write_Cmd(0x01);
+  74   3                      } 
+  75   2                      mq_check = mq_2();
+  76   2                      if(mq == 0)
+  77   2                      {
+  78   3                              uchar i;
+  79   3                              LcdShowStr(2,1,smoky);
+  80   3                              for(i = 0;i < 2;i++)
+  81   3                                      bep();
+  82   3                              Lcd1602_Write_Cmd(0x01);
+  83   3                      }
+  84   2                      hr_sr_check = hr_sr();
+  85   2                      if(hr_sr_check == 0)
+  86   2                      {
+  87   3                              uchar i;
+  88   3                              LcdShowStr(2,1,stranger);
+  89   3                              for(i = 0;i < 5;i++)
+  90   3                                      bep();
+  91   3                              Lcd1602_Write_Cmd(0x01);
+  92   3                      }                                         
+  93   2              }                
+  94   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    284    ----
+   CONSTANT SIZE    =     29    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      6       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,394 @@
+C51 COMPILER V9.54   1602                                                                  05/04/2018 10:32:29 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE 1602
+OBJECT MODULE PLACED IN .\Objects\1602.obj
+COMPILER INVOKED BY: C:\software\mdk5\C51\BIN\C51.EXE HARDWARE\1602\1602.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\HARDWARE\16
+                    -02;.\HARDWARE\DHT11;.\HARDWARE\DS1302;.\HARDWARE\TIMER) DEBUG OBJECTEXTEND PRINT(.\Listings\1602.lst) OBJECT(.\Objects\1
+                    -602.obj)
+
+line level    source
+
+   1          #include "reg52.h"
+   2          #include "1602.h"
+   3          #include "intrins.h"
+   4          #define DS1302_SECOND   0x80
+   5          #define DS1302_MINUTE   0x82
+   6          #define DS1302_HOUR             0x84 
+   7          
+   8          
+   9          extern xdata char set_H,set_M,set_S;
+  10          extern xdata int SET_TEMP_H,SET_TEMP_L;//温度高低限制
+  11          extern xdata int SET_RH_H,SET_RH_L;
+  12          extern void DS1302_SetTime(unsigned char Address, unsigned char Value);
+  13          sbit rs=P3^5;
+  14          sbit rw=P3^6;
+  15          sbit ep=P3^7;
+  16          
+  17          sbit KEY1=P1^1;
+  18          sbit KEY2=P1^0;
+  19          sbit KEY3=P1^2;
+  20          sbit KEY4=P1^3;
+  21          sbit KEY5=P1^4;
+  22          
+  23          
+  24          void delay (int m)
+  25          {
+  26   1       xdata unsigned int i,j;
+  27   1       for (i=0;i<m;i++)
+  28   1       for (j=0;j<253;j++);
+  29   1      }
+  30          
+  31           BOOL lcd_bz()
+  32          {
+  33   1        BOOL result;
+  34   1        rs=0;           // 读忙信号
+  35   1        rw=1;
+  36   1        ep=1;
+  37   1        _nop_();
+  38   1        _nop_();
+  39   1        _nop_();
+  40   1        _nop_();
+  41   1        result = (BOOL)(P2&0x80);
+  42   1        ep=0;
+  43   1        return result;
+  44   1      }
+  45          
+  46          void lcd_wcmd (BYTE cmd)
+  47          {
+  48   1        while (lcd_bz());
+  49   1        rs=0;
+  50   1        rw=0;
+  51   1        ep=0;
+  52   1        _nop_();
+  53   1        _nop_();
+C51 COMPILER V9.54   1602                                                                  05/04/2018 10:32:29 PAGE 2   
+
+  54   1        P2=cmd ;
+  55   1        _nop_();
+  56   1        _nop_();
+  57   1        _nop_();
+  58   1        _nop_();
+  59   1        ep=1;
+  60   1        _nop_();
+  61   1        _nop_();
+  62   1        _nop_();
+  63   1        _nop_();
+  64   1        ep=0;
+  65   1      }
+  66          
+  67          void lcd_pos (BYTE pos)
+  68          {
+  69   1        lcd_wcmd (pos|0x80);
+  70   1      }
+  71          
+  72          void lcd_wdat (BYTE dat)
+  73          {
+  74   1         while (lcd_bz());
+  75   1        rs=1;
+  76   1        rw=0;
+  77   1        ep=0;
+  78   1        _nop_();
+  79   1        _nop_();
+  80   1        P2=dat ;
+  81   1        _nop_();
+  82   1        _nop_();
+  83   1        _nop_();
+  84   1        _nop_();
+  85   1        ep=1;
+  86   1        _nop_();
+  87   1        _nop_();
+  88   1        _nop_();
+  89   1        _nop_();
+  90   1        ep=0;
+  91   1      }
+  92          
+  93          void LCD_1602_Init(void)
+  94          {
+  95   1        lcd_wcmd (0x38);
+  96   1        delay (1);
+  97   1        lcd_wcmd (0x0c);
+  98   1        delay (1);
+  99   1        lcd_wcmd (0x06);
+ 100   1        delay (1);
+ 101   1        lcd_wcmd (0x01);
+ 102   1        delay (1);
+ 103   1      }
+ 104          char code SETTEMP[]= {"SET  TEMP:"};
+ 105          char code REALTEMP[]={"REAL TEMP:"};
+ 106          void Print_Temp(int Set_temp,int Real_temp)
+ 107          {
+ 108   1              char i;
+ 109   1              lcd_pos (0);
+ 110   1      for(i=0;i<10;i++)
+ 111   1              lcd_wdat(SETTEMP[i]);
+ 112   1              if(Set_temp<0)
+ 113   1              {lcd_wdat('-');Set_temp=-Set_temp;}
+ 114   1              else
+ 115   1                      lcd_wdat(' ');
+C51 COMPILER V9.54   1602                                                                  05/04/2018 10:32:29 PAGE 3   
+
+ 116   1              
+ 117   1              lcd_wdat('0'+Set_temp/100);
+ 118   1              lcd_wdat('0'+(Set_temp/10)%10);
+ 119   1                      lcd_wdat('.');
+ 120   1              lcd_wdat('0'+Set_temp%10);
+ 121   1      
+ 122   1              lcd_wdat('C');  
+ 123   1              
+ 124   1              
+ 125   1              lcd_pos (40);
+ 126   1      for(i=0;i<10;i++)
+ 127   1              lcd_wdat(REALTEMP[i]);
+ 128   1              if(Real_temp<0)
+ 129   1              {lcd_wdat('-');Real_temp=-Real_temp;}
+ 130   1              else
+ 131   1                      lcd_wdat(' ');
+ 132   1              lcd_wdat('0'+Real_temp/100);
+ 133   1              lcd_wdat('0'+(Real_temp/10)%10);
+ 134   1              lcd_wdat('.');
+ 135   1              lcd_wdat('0'+Real_temp%10);
+ 136   1              lcd_wdat('C');          
+ 137   1      }
+ 138          
+ 139          void PRINT_SET_TIME_TIME()
+ 140          {
+ 141   1                      lcd_pos (44);
+ 142   1              lcd_wdat('0'+set_H/10);
+ 143   1              lcd_wdat('0'+set_H%10);
+ 144   1              lcd_wdat(':');
+ 145   1              lcd_wdat('0'+set_M/10);
+ 146   1              lcd_wdat('0'+set_M%10);
+ 147   1              lcd_wdat(':');
+ 148   1              lcd_wdat('0'+set_S/10);
+ 149   1              lcd_wdat('0'+set_S%10);
+ 150   1      }
+ 151          void PRINT__TEMP_H(void)
+ 152          {
+ 153   1                      lcd_pos (44);
+ 154   1              lcd_wdat('0'+SET_TEMP_H/100);
+ 155   1              lcd_wdat('0'+(SET_TEMP_H/10)%10);
+ 156   1              lcd_wdat('.');
+ 157   1              lcd_wdat('0'+SET_TEMP_H%10);
+ 158   1              lcd_wdat('C');
+ 159   1      }
+ 160          void PRINT__TEMP_L(void)
+ 161          {
+ 162   1                      lcd_pos (44);
+ 163   1              lcd_wdat('0'+SET_TEMP_L/100);
+ 164   1              lcd_wdat('0'+(SET_TEMP_L/10)%10);
+ 165   1              lcd_wdat('.');
+ 166   1              lcd_wdat('0'+SET_TEMP_L%10);
+ 167   1              lcd_wdat('C');
+ 168   1      }
+ 169          void PRINT__RH_H(void)
+ 170          {
+ 171   1                      lcd_pos (44);
+ 172   1              lcd_wdat('0'+SET_RH_H/10);
+ 173   1              lcd_wdat('0'+SET_RH_H%10);
+ 174   1              lcd_wdat('%');
+ 175   1                      lcd_wdat(' ');
+ 176   1                      lcd_wdat(' ');
+ 177   1                      lcd_wdat(' ');
+C51 COMPILER V9.54   1602                                                                  05/04/2018 10:32:29 PAGE 4   
+
+ 178   1                      lcd_wdat(' ');
+ 179   1                      lcd_wdat(' ');
+ 180   1      }
+ 181          
+ 182          void PRINT__RH_L(void)
+ 183          {
+ 184   1                      lcd_pos (44);
+ 185   1              lcd_wdat('0'+SET_RH_L/10);
+ 186   1              lcd_wdat('0'+SET_RH_L%10);
+ 187   1              lcd_wdat('%');
+ 188   1                              lcd_wdat(' ');
+ 189   1                      lcd_wdat(' ');
+ 190   1                      lcd_wdat(' ');
+ 191   1                      lcd_wdat(' ');
+ 192   1                      lcd_wdat(' ');
+ 193   1      }
+ 194          
+ 195          char KEY_SCAN(void)
+ 196          {
+ 197   1              char DATA=0;
+ 198   1      if(KEY1==0||KEY2==0||KEY3==0||KEY4==0||KEY5==0)
+ 199   1      {
+ 200   2              if(KEY1==0){while(KEY1==0);DATA= 1;}
+ 201   2              if(KEY2==0){while(KEY2==0);DATA= 2;}
+ 202   2              if(KEY3==0){while(KEY3==0);DATA= 3;}
+ 203   2              if(KEY4==0){while(KEY4==0);DATA= 4;}
+ 204   2              if(KEY5==0){while(KEY5==0);DATA= 5;}
+ 205   2              while(KEY1==0||KEY2==0||KEY3==0||KEY4==0||KEY5==0);
+ 206   2              return DATA;
+ 207   2      }
+ 208   1      else
+ 209   1              return 0;
+ 210   1      
+ 211   1      
+ 212   1      }
+ 213          //extern xdata char set_H,set_M,set_S;
+ 214          void PRINT_SET_TIME_hour()
+ 215          {
+ 216   1              static xdata char  old_time=0;
+ 217   1              char code Data[]={"SET TIME HOUR"};
+ 218   1              char xdata i;
+ 219   1              lcd_pos(0);
+ 220   1      for(i=0;i<13;i++)
+ 221   1              lcd_wdat(Data[i]);
+ 222   1                      switch(KEY_SCAN())
+ 223   1                      {
+ 224   2                              case 0:break;//无按键按下
+ 225   2                              case 1:break;
+ 226   2                              case 2:set_H=set_H>=23 ? 0:set_H+1;break;
+ 227   2                              case 3:break;
+ 228   2                              case 4:set_H=set_H<1 ? 23:set_H-1;break;
+ 229   2                      }
+ 230   1                      if(set_H!=old_time)//有新的设置时间
+ 231   1                      {
+ 232   2                              old_time=set_H;
+ 233   2                              DS1302_SetTime(DS1302_HOUR,old_time);
+ 234   2                              PRINT_SET_TIME_TIME();
+ 235   2                      }
+ 236   1      }
+ 237          
+ 238          void PRINT_SET_TIME_minute()
+ 239          {
+C51 COMPILER V9.54   1602                                                                  05/04/2018 10:32:29 PAGE 5   
+
+ 240   1              static xdata char  old_time=0;
+ 241   1              char code Data[]={"SET TIME MINUTE"};
+ 242   1              char xdata i;
+ 243   1              lcd_pos(0);
+ 244   1      for(i=0;i<15;i++)
+ 245   1              lcd_wdat(Data[i]);
+ 246   1                      switch(KEY_SCAN())
+ 247   1                      {
+ 248   2                              case 0:break;//无按键按下
+ 249   2                              case 1:break;
+ 250   2                              case 2:set_M=set_M>=59 ? 0:set_M+1;break;
+ 251   2                              case 3:break;
+ 252   2                              case 4:set_M=set_M<1 ? 59:set_M-1;break;
+ 253   2                      }
+ 254   1                      if(set_M!=old_time)//有新的设置时间
+ 255   1                      {
+ 256   2                              old_time=set_M;
+ 257   2                              DS1302_SetTime(DS1302_MINUTE,set_M);
+ 258   2                              PRINT_SET_TIME_TIME();
+ 259   2                      }
+ 260   1      }
+ 261          void PRINT_SET_TIME_second()
+ 262          {
+ 263   1              static xdata char  old_time=0;
+ 264   1              char code Data[]={"SET TIME SECOND"};
+ 265   1              char xdata i;
+ 266   1              lcd_pos(0);
+ 267   1      for(i=0;i<15;i++)
+ 268   1              lcd_wdat(Data[i]);
+ 269   1                      switch(KEY_SCAN())
+ 270   1                      {
+ 271   2                              case 0:break;//无按键按下
+ 272   2                              case 1:break;
+ 273   2                              case 2:set_S=set_S>=59 ? 0:set_S+1;break;
+ 274   2                              case 3:break;
+ 275   2                              case 4:set_S=set_S<1 ? 59:set_S-1;break;
+ 276   2                      }
+ 277   1                      if(set_S!=old_time)//有新的设置时间
+ 278   1                      {
+ 279   2                              old_time=set_S;
+ 280   2                              DS1302_SetTime(DS1302_SECOND,set_S);
+ 281   2                              PRINT_SET_TIME_TIME();
+ 282   2                      }
+ 283   1      }
+ 284          
+ 285          //xdata int SET_TEMP_H,SET_TEMP_L;
+ 286          void PRINT_SET_TEMP_H(void)
+ 287          {
+ 288   1              char code Data[]={"SET Temp High"};
+ 289   1              char xdata i;
+ 290   1              lcd_pos(0);
+ 291   1      for(i=0;i<13;i++)
+ 292   1              lcd_wdat(Data[i]);
+ 293   1                      switch(KEY_SCAN())
+ 294   1                      {
+ 295   2                              case 0:break;//无按键按下
+ 296   2                              case 1:break;
+ 297   2                              case 2:SET_TEMP_H=SET_TEMP_H>=980 ? 980:SET_TEMP_H+10;break;
+ 298   2                              case 3:break;
+ 299   2                              case 4:SET_TEMP_H=SET_TEMP_H<30 ? 30:SET_TEMP_H-10;break;
+ 300   2                      }
+ 301   1                              PRINT__TEMP_H();
+C51 COMPILER V9.54   1602                                                                  05/04/2018 10:32:29 PAGE 6   
+
+ 302   1      }
+ 303          
+ 304          void PRINT_SET_TEMP_L(void)
+ 305          {
+ 306   1              char code Data[]={"SET Temp Low"};
+ 307   1              char xdata i;
+ 308   1              lcd_pos(0);
+ 309   1      for(i=0;i<12;i++)
+ 310   1              lcd_wdat(Data[i]);
+ 311   1                      switch(KEY_SCAN())
+ 312   1                      {
+ 313   2                              case 0:break;//无按键按下
+ 314   2                              case 1:break;
+ 315   2                              case 2:SET_TEMP_L=SET_TEMP_L>=980 ? 980:SET_TEMP_L+10;break;
+ 316   2                              case 3:break;
+ 317   2                              case 4:SET_TEMP_L=SET_TEMP_L<30 ? 30:SET_TEMP_L-10;break;
+ 318   2                      }
+ 319   1                              PRINT__TEMP_L();
+ 320   1      }
+ 321          
+ 322          
+ 323          void PRINT_SET_RH_H(void)
+ 324          {
+ 325   1              char code Data[]={"SET RH High"};
+ 326   1              char xdata i;
+ 327   1              lcd_pos(0);
+ 328   1      for(i=0;i<11;i++)
+ 329   1              lcd_wdat(Data[i]);
+ 330   1                      switch(KEY_SCAN())
+ 331   1                      {
+ 332   2                              case 0:break;//无按键按下
+ 333   2                              case 1:break;
+ 334   2                              case 2:SET_RH_H=SET_RH_H>=98 ? 98:SET_RH_H+1;break;
+ 335   2                              case 3:break;
+ 336   2                              case 4:SET_RH_H=SET_RH_H<3 ? 3:SET_RH_H-1;break;
+ 337   2                      }
+ 338   1                              PRINT__RH_H();
+ 339   1      }
+ 340          
+ 341          void PRINT_SET_RH_L(void)
+ 342          {
+ 343   1              char code Data[]={"SET RH Low"};
+ 344   1              char xdata i;
+ 345   1              lcd_pos(0);
+ 346   1      for(i=0;i<10;i++)
+ 347   1              lcd_wdat(Data[i]);
+ 348   1                      switch(KEY_SCAN())
+ 349   1                      {
+ 350   2                              case 0:break;//无按键按下
+ 351   2                              case 1:break;
+ 352   2                              case 2:SET_RH_L=SET_RH_L>=98 ? 98:SET_RH_L+1;break;
+ 353   2                              case 3:break;
+ 354   2                              case 4:SET_RH_L=SET_RH_L<3 ? 3:SET_RH_L-1;break;
+ 355   2                      }
+ 356   1                              PRINT__RH_L();
+ 357   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1881    ----
+   CONSTANT SIZE    =    118    ----
+   XDATA SIZE       =      3      11
+C51 COMPILER V9.54   1602                                                                  05/04/2018 10:32:29 PAGE 7   
+
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
